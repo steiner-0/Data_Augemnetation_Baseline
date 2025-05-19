@@ -1,0 +1,12 @@
+{
+  "task": "causal_judgment",
+  "model": "gpt-4o-mini-2024-07-18",
+  "validator_model": "gpt-4o-mini-2024-07-18",
+  "total_examples": 190,
+  "correct_examples": 84,
+  "accuracy": 0.4421052631578947,
+  "timestamp": "20250511_032937",
+  "prompt_type": "gpt",
+  "task_prefix_present": true,
+  "append_choices_to_input": false
+}

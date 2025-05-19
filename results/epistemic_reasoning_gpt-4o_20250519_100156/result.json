@@ -1,0 +1,12 @@
+{
+  "task": "epistemic_reasoning",
+  "model": "gpt-4o",
+  "validator_model": "gpt-4o",
+  "total_examples": 2000,
+  "correct_examples": 1626,
+  "accuracy": 0.813,
+  "timestamp": "20250519_100156",
+  "prompt_type": "gpt",
+  "task_prefix_present": true,
+  "append_choices_to_input": false
+}

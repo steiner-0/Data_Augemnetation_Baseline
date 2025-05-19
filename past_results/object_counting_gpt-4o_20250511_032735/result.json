@@ -1,0 +1,12 @@
+{
+  "task": "object_counting",
+  "model": "gpt-4o",
+  "validator_model": "gpt-4o",
+  "total_examples": 1000,
+  "correct_examples": 890,
+  "accuracy": 0.89,
+  "timestamp": "20250511_032735",
+  "prompt_type": "gpt",
+  "task_prefix_present": false,
+  "append_choices_to_input": false
+}

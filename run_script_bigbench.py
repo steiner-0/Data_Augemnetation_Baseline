@@ -64,18 +64,42 @@ async def validate_answer_async(prediction_text, ground_truth, model_name="gpt-4
     Async version of the validation function
     """
     prompt = f"""
-    Determine if these two answers are equivalent:
-    
-    Answer 1: {prediction_text}
-    Answer 2: {ground_truth}
-    
-    You must output ONLY a single digit: 1 if the answers are equivalent (even if expressed differently), or 0 if they are not equivalent.
-    """
+You are given two pieces of text: a predicted answer and the correct answer. Determine whether the predicted answer conveys the same meaning as the correct answer, even if expressed differently. Focus on whether the key information matches, not on formatting or extra wording.
+
+You must output ONLY a single digit: 1 if the predicted answer is semantically equivalent to the correct answer, or 0 if it is not.
+
+Predicted Answer: {prediction_text}
+Correct Answer: {ground_truth}
+Output: [1 or 0]
+"""
     response = await call_gpt_series_async(prompt, model_name=model_name)
     response_content = response.choices[0].message.content.strip()
     return "1" in response_content
 
-async def process_example(example, sys_prompt, model_name, validator_model_name, is_gemini=False):
+def format_question_with_task_prefixes(question, example, task_data):
+    """
+    Format the question with task prefix and choices based on task configuration
+    """
+    # Start with the original question
+    formatted_question = question
+    
+    # Add task prefix if it exists
+    if "task_prefix" in task_data:
+        formatted_question = task_data["task_prefix"] + "\n\n" + formatted_question
+    
+    # Append choices if configured to do so
+    if task_data.get("append_choices_to_input", False) and "target_scores" in example:
+        # Extract choices from target_scores keys
+        choices = list(example["target_scores"].keys())
+        if choices:
+            choice_text = "\n\nChoices:\n"
+            for choice in choices:
+                choice_text += f"{choice}\n"
+            formatted_question += choice_text
+    
+    return formatted_question
+
+async def process_example(example, sys_prompt, model_name, validator_model_name, task_data, is_gemini=False):
     """
     Process a single example asynchronously
     """
@@ -92,7 +116,7 @@ async def process_example(example, sys_prompt, model_name, validator_model_name,
     else:
         # Use target_scores format where score 1 indicates correct answer
         target_text = None
-        for k, v in example.get("target_scores").items():
+        for k, v in example.get("target_scores", {}).items():
             if v == 1:
                 target_text = k
                 break
@@ -100,12 +124,15 @@ async def process_example(example, sys_prompt, model_name, validator_model_name,
     if target_text is None:
         raise ValueError(f"Could not determine target text for example: {example}")
     
+    # Format the question with task prefix and choices
+    formatted_question = format_question_with_task_prefixes(question, example, task_data)
+    
     # Make the first API call to get the model's response - now both are async
     if is_gemini:
         # Make async call for Gemini
         response = await call_gemini_series_async(
             sys_prompt=sys_prompt, 
-            user_prompt=f"Answer the question:\n\n{question}",
+            user_prompt=f"Answer the question:\n\n{formatted_question}",
             model_name=model_name
         )
         response_content = response.text.strip()
@@ -113,7 +140,7 @@ async def process_example(example, sys_prompt, model_name, validator_model_name,
         # Make async call for GPT
         response = await call_gpt_series_async(
             sys_prompt=sys_prompt, 
-            user_prompt=f"Answer the question:\n\n{question}",
+            user_prompt=f"Answer the question:\n\n{formatted_question}",
             model_name=model_name
         )
         response_content = response.choices[0].message.content.strip()
@@ -123,6 +150,7 @@ async def process_example(example, sys_prompt, model_name, validator_model_name,
     
     return {
         "question": question,
+        "formatted_question": formatted_question,
         "answer": target_text,
         "response": response_content,
         "correct": correct
@@ -223,7 +251,9 @@ async def main_async():
     
     os.makedirs("results", exist_ok=True)
     args = parser.parse_args()
-    dataset = _check_or_download_dataset(args=args)
+    
+    # Load the task data
+    task_data = _check_or_download_dataset(args=args)
     task_name = args.task_name
     model_name = args.model
     
@@ -239,7 +269,7 @@ async def main_async():
     max_concurrency = args.concurrency
 
     # Sample the dataset if specified
-    examples = dataset['examples']
+    examples = task_data['examples']
     if args.sample_size and args.sample_size < len(examples):
         import random
         random.seed(42)  # For reproducibility
@@ -249,13 +279,19 @@ async def main_async():
     # Get the appropriate prompt and check if it's a Gemini model
     sys_prompt, is_gemini = get_sys_prompt_for_task_and_model(task_name, model_name)
     print(f"Using {'Gemini' if is_gemini else 'GPT'} prompt for {task_name}")
+    
+    # Check if task has prefix and choice settings
+    if "task_prefix" in task_data:
+        print(f"Task prefix found: {task_data['task_prefix']}")
+    if task_data.get("append_choices_to_input", False):
+        print("Task is configured to append choices to input")
 
     # Create a semaphore to limit concurrency
     semaphore = asyncio.Semaphore(max_concurrency)
 
     async def process_with_semaphore(example):
         async with semaphore:
-            return await process_example(example, sys_prompt, model_name, validator_model_name, is_gemini)
+            return await process_example(example, sys_prompt, model_name, validator_model_name, task_data, is_gemini)
 
     # Process all examples concurrently with a semaphore to limit concurrency
     tasks = [process_with_semaphore(example) for example in examples]
@@ -284,6 +320,8 @@ async def main_async():
         "accuracy": correct_count / len(examples),
         "timestamp": timestamp,
         "prompt_type": "gemini" if is_gemini else "gpt",
+        "task_prefix_present": "task_prefix" in task_data,
+        "append_choices_to_input": task_data.get("append_choices_to_input", False)
     }
 
     with open(f"{result_dir}/result.json", "w") as f:
