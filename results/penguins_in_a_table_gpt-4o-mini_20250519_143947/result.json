@@ -1,0 +1,12 @@
+{
+  "task": "penguins_in_a_table",
+  "model": "gpt-4o-mini",
+  "validator_model": "gpt-4o-mini",
+  "total_examples": 149,
+  "correct_examples": 148,
+  "accuracy": 0.9932885906040269,
+  "timestamp": "20250519_143947",
+  "prompt_type": "gpt",
+  "task_prefix_present": true,
+  "append_choices_to_input": false
+}

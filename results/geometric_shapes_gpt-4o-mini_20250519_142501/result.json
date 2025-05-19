@@ -1,0 +1,12 @@
+{
+  "task": "geometric_shapes",
+  "model": "gpt-4o-mini",
+  "validator_model": "gpt-4o-mini",
+  "total_examples": 360,
+  "correct_examples": 258,
+  "accuracy": 0.7166666666666667,
+  "timestamp": "20250519_142501",
+  "prompt_type": "gpt",
+  "task_prefix_present": false,
+  "append_choices_to_input": true
+}

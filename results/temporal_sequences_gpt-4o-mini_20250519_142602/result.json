@@ -1,0 +1,12 @@
+{
+  "task": "temporal_sequences",
+  "model": "gpt-4o-mini",
+  "validator_model": "gpt-4o-mini",
+  "total_examples": 1000,
+  "correct_examples": 917,
+  "accuracy": 0.917,
+  "timestamp": "20250519_142602",
+  "prompt_type": "gpt",
+  "task_prefix_present": false,
+  "append_choices_to_input": true
+}

@@ -186,7 +186,7 @@ def get_available_models():
     return [
         "gpt-4o",
         "gpt-4-turbo",
-        "gpt-4o-mini-2024-07-18",
+        "gpt-4o-mini",
         "gpt-3.5-turbo",
         "gemini-1.5-flash",
         "gemini-1.5-pro",
